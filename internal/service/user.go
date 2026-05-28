@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/firmanains/cinema-ticketing/config"
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
@@ -88,11 +88,11 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterRequest) 
 func (s *userService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, constant.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, constant.ErrInvalidCredentials
 	}
 
 	accessToken, err := s.generateAccessToken(user.ID)
@@ -120,7 +120,7 @@ func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain
 	if err != nil {
 		token, dbErr := s.tokenRepo.FindByTokenHash(ctx, tokenHash)
 		if dbErr != nil {
-			return nil, errors.New("token is invalid or expired")
+			return nil, constant.ErrTokenInvalid
 		}
 		userIDStr = token.UserID.String()
 		ttl := time.Until(token.ExpiresAt)
@@ -129,7 +129,7 @@ func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return nil, errors.New("token is invalid or expired")
+		return nil, constant.ErrTokenInvalid
 	}
 
 	accessToken, err := s.generateAccessToken(userID)

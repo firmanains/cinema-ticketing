@@ -2,11 +2,11 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
@@ -22,7 +22,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	var user domain.User
 	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE email = $1", email)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return nil, constant.ErrUserNotFound
 	}
 	return &user, nil
 }
@@ -35,7 +35,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	_, err := r.db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
-			return errors.New("email already registered")
+			return constant.ErrDuplicateEmail
 		}
 		return err
 	}

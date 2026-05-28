@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
@@ -28,7 +28,7 @@ func NewShowtimeService(repo ShowtimeRepository) *showtimeService {
 
 func (s *showtimeService) Create(ctx context.Context, req domain.CreateShowtimeRequest) (*domain.Showtime, error) {
 	if !req.EndTime.After(req.StartTime) {
-		return nil, errors.New("start time must be before end time")
+		return nil, constant.ErrInvalidTimeRange
 	}
 
 	now := time.Now()
@@ -65,24 +65,15 @@ func (s *showtimeService) GetAll(ctx context.Context, page, limit int) (*domain.
 }
 
 func (s *showtimeService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Showtime, error) {
-	showtime, err := s.repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, errors.New("showtime not found")
-	}
-	return showtime, nil
+	return s.repo.FindByID(ctx, id)
 }
 
 func (s *showtimeService) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
 	if req.StartTime != nil && req.EndTime != nil && !req.EndTime.After(*req.StartTime) {
-		return nil, errors.New("start time must be before end time")
+		return nil, constant.ErrInvalidTimeRange
 	}
 
-	showtime, err := s.repo.Update(ctx, id, req)
-	if err != nil {
-		return nil, err
-	}
-
-	return showtime, nil
+	return s.repo.Update(ctx, id, req)
 }
 
 func (s *showtimeService) Delete(ctx context.Context, id uuid.UUID) error {

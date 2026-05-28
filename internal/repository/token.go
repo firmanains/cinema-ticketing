@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jmoiron/sqlx"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
@@ -24,7 +24,7 @@ func (r *refreshTokenRepository) FindByTokenHash(ctx context.Context, tokenHash 
 		tokenHash,
 	)
 	if err != nil {
-		return nil, errors.New("token is invalid or expired")
+		return nil, constant.ErrTokenInvalid
 	}
 	return &token, nil
 }

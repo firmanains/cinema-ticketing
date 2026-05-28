@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
@@ -44,7 +44,7 @@ func (r *showtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	var s domain.Showtime
 	err := r.db.GetContext(ctx, &s, "SELECT * FROM showtimes WHERE id = $1", id)
 	if err != nil {
-		return nil, errors.New("showtime not found")
+		return nil, constant.ErrShowtimeNotFound
 	}
 	return &s, nil
 }
@@ -57,7 +57,7 @@ func (r *showtimeRepository) Create(ctx context.Context, s *domain.Showtime) err
 	_, err := r.db.NamedExecContext(ctx, query, s)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid time range") {
-			return errors.New("start time must be before end time")
+			return constant.ErrInvalidTimeRange
 		}
 		return err
 	}
@@ -68,6 +68,10 @@ func (r *showtimeRepository) Update(ctx context.Context, id uuid.UUID, req domai
 	existing, err := r.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	if req.MovieTitle == nil && req.StartTime == nil && req.EndTime == nil && req.Price == nil && req.TotalSeats == nil {
+		return nil, constant.ErrNoFieldsToUpdate
 	}
 
 	if req.MovieTitle != nil {
@@ -84,10 +88,6 @@ func (r *showtimeRepository) Update(ctx context.Context, id uuid.UUID, req domai
 	}
 	if req.TotalSeats != nil {
 		existing.TotalSeats = *req.TotalSeats
-	}
-
-	if req.MovieTitle == nil && req.StartTime == nil && req.EndTime == nil && req.Price == nil && req.TotalSeats == nil {
-		return nil, errors.New("no fields to update")
 	}
 
 	existing.UpdatedAt = time.Now()
@@ -112,7 +112,7 @@ func (r *showtimeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return errors.New("showtime not found")
+		return constant.ErrShowtimeNotFound
 	}
 	return nil
 }
