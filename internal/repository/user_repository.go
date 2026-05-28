@@ -18,6 +18,15 @@ func NewUserRepository(db *sqlx.DB) domain.UserRepository {
 	return &userRepository{db: db}
 }
 
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var user domain.User
+	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE email = $1", email)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+	return &user, nil
+}
+
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `
 		INSERT INTO users (id, name, email, password_hash, created_at, updated_at)

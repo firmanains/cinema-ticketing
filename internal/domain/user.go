@@ -18,6 +18,7 @@ type User struct {
 
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
+	FindByEmail(ctx context.Context, email string) (*User, error)
 }
 
 type UserService interface {
