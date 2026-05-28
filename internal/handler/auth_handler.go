@@ -16,6 +16,24 @@ func NewAuthHandler(userSvc domain.UserService) *AuthHandler {
 	return &AuthHandler{userSvc: userSvc}
 }
 
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	var body struct {
+		RefreshToken string `json:"refresh_token" validate:"required"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
+	}
+	if err := validator.Validate(body); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	if err := h.userSvc.Logout(c.UserContext(), body.RefreshToken); err != nil {
+		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+	}
+
+	return response.Success(c, fiber.StatusOK, "logged out successfully", nil)
+}
+
 func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	var body struct {
 		RefreshToken string `json:"refresh_token" validate:"required"`

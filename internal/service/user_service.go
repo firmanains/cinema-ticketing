@@ -74,6 +74,16 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterRequest) 
 	}, nil
 }
 
+func (s *userService) Logout(ctx context.Context, refreshToken string) error {
+	sum := sha256.Sum256([]byte(refreshToken))
+	tokenHash := hex.EncodeToString(sum[:])
+
+	key := fmt.Sprintf("refresh_token:%s", tokenHash)
+	_ = s.rdb.Del(ctx, key).Err()
+
+	return s.tokenRepo.RevokeByTokenHash(ctx, tokenHash)
+}
+
 func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
 	sum := sha256.Sum256([]byte(refreshToken))
 	tokenHash := hex.EncodeToString(sum[:])
