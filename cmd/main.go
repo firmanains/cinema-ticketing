@@ -7,6 +7,9 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/firmanains/cinema-ticketing/config"
+	"github.com/firmanains/cinema-ticketing/internal/handler"
+	"github.com/firmanains/cinema-ticketing/internal/repository"
+	"github.com/firmanains/cinema-ticketing/internal/service"
 )
 
 func main() {
@@ -28,14 +31,16 @@ func main() {
 	}
 	defer rdb.Close()
 
-	_ = db
-	_ = rdb
+	userRepo := repository.NewUserRepository(db)
+	tokenRepo := repository.NewRefreshTokenRepository(db)
+	userSvc := service.NewUserService(userRepo, tokenRepo, cfg, rdb)
+
+	authHandler := handler.NewAuthHandler(userSvc)
 
 	app := fiber.New()
 
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
-	})
+	api := app.Group("/api/v1")
+	api.Post("/auth/register", authHandler.Register)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
