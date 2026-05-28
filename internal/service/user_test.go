@@ -36,99 +36,45 @@ func newTestConfig() *config.Config {
 	}
 }
 
-func TestUserService_Logout(t *testing.T) {
+func TestUserService_Register(t *testing.T) {
 	tests := []struct {
-		name         string
-		refreshToken string
-		mockSetup    func(tokenRepo *mock.MockRefreshTokenRepository)
-		wantErr      bool
+		name       string
+		input      domain.RegisterRequest
+		mockSetup  func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository)
+		wantErr    bool
+		wantErrMsg string
 	}{
 		{
-			name:         "success",
-			refreshToken: "plaintexttoken",
-			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
+			name: "success",
+			input: domain.RegisterRequest{
+				Name:     "John Doe",
+				Email:    "john@example.com",
+				Password: "secret123",
+			},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				userRepo.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Return(nil)
 				tokenRepo.EXPECT().
-					RevokeByTokenHash(gomock.Any(), gomock.Any()).
+					Store(gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:         "revoke fails",
-			refreshToken: "plaintexttoken",
-			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
-				tokenRepo.EXPECT().
-					RevokeByTokenHash(gomock.Any(), gomock.Any()).
-					Return(errors.New("db error"))
+			name: "duplicate email",
+			input: domain.RegisterRequest{
+				Name:     "John Doe",
+				Email:    "john@example.com",
+				Password: "secret123",
 			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			userRepo := mock.NewMockUserRepository(ctrl)
-			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
-			tt.mockSetup(tokenRepo)
-
-			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
-			err := svc.Logout(context.Background(), tt.refreshToken)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestUserService_Refresh(t *testing.T) {
-	tests := []struct {
-		name         string
-		refreshToken string
-		mockSetup    func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, rdb *redis.Client)
-		wantErr      bool
-		wantErrMsg   string
-	}{
-		{
-			name:         "success - cache hit",
-			refreshToken: "plaintexttoken",
-			mockSetup: func(_ *mock.MockUserRepository, _ *mock.MockRefreshTokenRepository, rdb *redis.Client) {
-				userID := uuid.New()
-				sum := sha256.Sum256([]byte("plaintexttoken"))
-				hash := hex.EncodeToString(sum[:])
-				rdb.Set(context.Background(), "refresh_token:"+hash, userID.String(), time.Minute)
-			},
-			wantErr: false,
-		},
-		{
-			name:         "success - cache miss, db hit",
-			refreshToken: "plaintexttoken2",
-			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
-				userID := uuid.New()
-				tokenRepo.EXPECT().
-					FindByTokenHash(gomock.Any(), gomock.Any()).
-					Return(&domain.RefreshToken{
-						UserID:    userID,
-						ExpiresAt: time.Now().Add(24 * time.Hour),
-					}, nil)
-			},
-			wantErr: false,
-		},
-		{
-			name:         "token not found",
-			refreshToken: "badtoken",
-			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
-				tokenRepo.EXPECT().
-					FindByTokenHash(gomock.Any(), gomock.Any()).
-					Return(nil, errors.New("token is invalid or expired"))
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				userRepo.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Return(errors.New("email already registered"))
 			},
 			wantErr:    true,
-			wantErrMsg: "token is invalid or expired",
+			wantErrMsg: "email already registered",
 		},
 	}
 
@@ -139,11 +85,10 @@ func TestUserService_Refresh(t *testing.T) {
 
 			userRepo := mock.NewMockUserRepository(ctrl)
 			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
-			rdb := newTestRedis(t)
-			tt.mockSetup(userRepo, tokenRepo, rdb)
+			tt.mockSetup(userRepo, tokenRepo)
 
-			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), rdb)
-			result, err := svc.Refresh(context.Background(), tt.refreshToken)
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
+			result, err := svc.Register(context.Background(), tt.input)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -153,7 +98,7 @@ func TestUserService_Refresh(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.NotEmpty(t, result.AccessToken)
-				assert.Equal(t, tt.refreshToken, result.RefreshToken)
+				assert.NotEmpty(t, result.RefreshToken)
 			}
 		})
 	}
@@ -232,45 +177,49 @@ func TestUserService_Login(t *testing.T) {
 	}
 }
 
-func TestUserService_Register(t *testing.T) {
+func TestUserService_Refresh(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      domain.RegisterRequest
-		mockSetup  func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository)
-		wantErr    bool
-		wantErrMsg string
+		name         string
+		refreshToken string
+		mockSetup    func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, rdb *redis.Client)
+		wantErr      bool
+		wantErrMsg   string
 	}{
 		{
-			name: "success",
-			input: domain.RegisterRequest{
-				Name:     "John Doe",
-				Email:    "john@example.com",
-				Password: "secret123",
-			},
-			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
-				userRepo.EXPECT().
-					Create(gomock.Any(), gomock.Any()).
-					Return(nil)
-				tokenRepo.EXPECT().
-					Store(gomock.Any(), gomock.Any()).
-					Return(nil)
+			name:         "success - cache hit",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(_ *mock.MockUserRepository, _ *mock.MockRefreshTokenRepository, rdb *redis.Client) {
+				userID := uuid.New()
+				sum := sha256.Sum256([]byte("plaintexttoken"))
+				hash := hex.EncodeToString(sum[:])
+				rdb.Set(context.Background(), "refresh_token:"+hash, userID.String(), time.Minute)
 			},
 			wantErr: false,
 		},
 		{
-			name: "duplicate email",
-			input: domain.RegisterRequest{
-				Name:     "John Doe",
-				Email:    "john@example.com",
-				Password: "secret123",
+			name:         "success - cache miss, db hit",
+			refreshToken: "plaintexttoken2",
+			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
+				userID := uuid.New()
+				tokenRepo.EXPECT().
+					FindByTokenHash(gomock.Any(), gomock.Any()).
+					Return(&domain.RefreshToken{
+						UserID:    userID,
+						ExpiresAt: time.Now().Add(24 * time.Hour),
+					}, nil)
 			},
-			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
-				userRepo.EXPECT().
-					Create(gomock.Any(), gomock.Any()).
-					Return(errors.New("email already registered"))
+			wantErr: false,
+		},
+		{
+			name:         "token not found",
+			refreshToken: "badtoken",
+			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
+				tokenRepo.EXPECT().
+					FindByTokenHash(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("token is invalid or expired"))
 			},
 			wantErr:    true,
-			wantErrMsg: "email already registered",
+			wantErrMsg: "token is invalid or expired",
 		},
 	}
 
@@ -281,10 +230,11 @@ func TestUserService_Register(t *testing.T) {
 
 			userRepo := mock.NewMockUserRepository(ctrl)
 			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
-			tt.mockSetup(userRepo, tokenRepo)
+			rdb := newTestRedis(t)
+			tt.mockSetup(userRepo, tokenRepo, rdb)
 
-			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
-			result, err := svc.Register(context.Background(), tt.input)
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), rdb)
+			result, err := svc.Refresh(context.Background(), tt.refreshToken)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -294,7 +244,57 @@ func TestUserService_Register(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.NotEmpty(t, result.AccessToken)
-				assert.NotEmpty(t, result.RefreshToken)
+				assert.Equal(t, tt.refreshToken, result.RefreshToken)
+			}
+		})
+	}
+}
+
+func TestUserService_Logout(t *testing.T) {
+	tests := []struct {
+		name         string
+		refreshToken string
+		mockSetup    func(tokenRepo *mock.MockRefreshTokenRepository)
+		wantErr      bool
+	}{
+		{
+			name:         "success",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
+				tokenRepo.EXPECT().
+					RevokeByTokenHash(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:         "revoke fails",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
+				tokenRepo.EXPECT().
+					RevokeByTokenHash(gomock.Any(), gomock.Any()).
+					Return(errors.New("db error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			userRepo := mock.NewMockUserRepository(ctrl)
+			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
+			tt.mockSetup(tokenRepo)
+
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
+			err := svc.Logout(context.Background(), tt.refreshToken)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

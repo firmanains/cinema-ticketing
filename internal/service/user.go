@@ -18,19 +18,30 @@ import (
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 )
 
+type UserRepository interface {
+	Create(ctx context.Context, user *domain.User) error
+	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+}
+
+type RefreshTokenRepository interface {
+	Store(ctx context.Context, token *domain.RefreshToken) error
+	FindByTokenHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
+	RevokeByTokenHash(ctx context.Context, tokenHash string) error
+}
+
 type userService struct {
-	userRepo     domain.UserRepository
-	tokenRepo    domain.RefreshTokenRepository
-	cfg          *config.Config
-	rdb          *redis.Client
+	userRepo  UserRepository
+	tokenRepo RefreshTokenRepository
+	cfg       *config.Config
+	rdb       *redis.Client
 }
 
 func NewUserService(
-	userRepo domain.UserRepository,
-	tokenRepo domain.RefreshTokenRepository,
+	userRepo UserRepository,
+	tokenRepo RefreshTokenRepository,
 	cfg *config.Config,
 	rdb *redis.Client,
-) domain.UserService {
+) *userService {
 	return &userService{
 		userRepo:  userRepo,
 		tokenRepo: tokenRepo,
@@ -74,14 +85,30 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterRequest) 
 	}, nil
 }
 
-func (s *userService) Logout(ctx context.Context, refreshToken string) error {
-	sum := sha256.Sum256([]byte(refreshToken))
-	tokenHash := hex.EncodeToString(sum[:])
+func (s *userService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
 
-	key := fmt.Sprintf("refresh_token:%s", tokenHash)
-	_ = s.rdb.Del(ctx, key).Err()
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
 
-	return s.tokenRepo.RevokeByTokenHash(ctx, tokenHash)
+	accessToken, err := s.generateAccessToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.generateAndStoreRefreshToken(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
@@ -116,30 +143,14 @@ func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain
 	}, nil
 }
 
-func (s *userService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
-	user, err := s.userRepo.FindByEmail(ctx, req.Email)
-	if err != nil {
-		return nil, errors.New("invalid credentials")
-	}
+func (s *userService) Logout(ctx context.Context, refreshToken string) error {
+	sum := sha256.Sum256([]byte(refreshToken))
+	tokenHash := hex.EncodeToString(sum[:])
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid credentials")
-	}
+	key := fmt.Sprintf("refresh_token:%s", tokenHash)
+	_ = s.rdb.Del(ctx, key).Err()
 
-	accessToken, err := s.generateAccessToken(user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.generateAndStoreRefreshToken(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &domain.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
+	return s.tokenRepo.RevokeByTokenHash(ctx, tokenHash)
 }
 
 func (s *userService) generateAccessToken(userID uuid.UUID) (string, error) {
