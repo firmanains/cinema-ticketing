@@ -16,7 +16,7 @@ type showtimeRepository struct {
 	db *sqlx.DB
 }
 
-func NewShowtimeRepository(db *sqlx.DB) domain.ShowtimeRepository {
+func NewShowtimeRepository(db *sqlx.DB) *showtimeRepository {
 	return &showtimeRepository{db: db}
 }
 
@@ -49,14 +49,17 @@ func (r *showtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	return &s, nil
 }
 
-func (r *showtimeRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.ExecContext(ctx, "DELETE FROM showtimes WHERE id = $1", id)
+func (r *showtimeRepository) Create(ctx context.Context, s *domain.Showtime) error {
+	query := `
+		INSERT INTO showtimes (id, movie_title, start_time, end_time, price, total_seats, booked_seats, created_at, updated_at)
+		VALUES (:id, :movie_title, :start_time, :end_time, :price, :total_seats, :booked_seats, :created_at, :updated_at)
+	`
+	_, err := r.db.NamedExecContext(ctx, query, s)
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid time range") {
+			return errors.New("start time must be before end time")
+		}
 		return err
-	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return errors.New("showtime not found")
 	}
 	return nil
 }
@@ -102,17 +105,14 @@ func (r *showtimeRepository) Update(ctx context.Context, id uuid.UUID, req domai
 	return existing, nil
 }
 
-func (r *showtimeRepository) Create(ctx context.Context, s *domain.Showtime) error {
-	query := `
-		INSERT INTO showtimes (id, movie_title, start_time, end_time, price, total_seats, booked_seats, created_at, updated_at)
-		VALUES (:id, :movie_title, :start_time, :end_time, :price, :total_seats, :booked_seats, :created_at, :updated_at)
-	`
-	_, err := r.db.NamedExecContext(ctx, query, s)
+func (r *showtimeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx, "DELETE FROM showtimes WHERE id = $1", id)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid time range") {
-			return errors.New("start time must be before end time")
-		}
 		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("showtime not found")
 	}
 	return nil
 }

@@ -13,7 +13,7 @@ type refreshTokenRepository struct {
 	db *sqlx.DB
 }
 
-func NewRefreshTokenRepository(db *sqlx.DB) domain.RefreshTokenRepository {
+func NewRefreshTokenRepository(db *sqlx.DB) *refreshTokenRepository {
 	return &refreshTokenRepository{db: db}
 }
 
