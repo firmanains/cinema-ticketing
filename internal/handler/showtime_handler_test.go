@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -17,6 +18,121 @@ import (
 	"github.com/firmanains/cinema-ticketing/internal/handler"
 	"github.com/firmanains/cinema-ticketing/internal/mock"
 )
+
+func TestShowtimeHandler_GetAll(t *testing.T) {
+	tests := []struct {
+		name        string
+		query       string
+		mockSetup   func(svc *mock.MockShowtimeService)
+		wantStatus  int
+		wantSuccess bool
+	}{
+		{
+			name:  "success",
+			query: "?page=1&limit=10",
+			mockSetup: func(svc *mock.MockShowtimeService) {
+				svc.EXPECT().
+					GetAll(gomock.Any(), 1, 10).
+					Return(&domain.PaginatedResult[domain.Showtime]{
+						Items: []domain.Showtime{{MovieTitle: "Inception"}},
+						Total: 1, Page: 1, Limit: 10,
+					}, nil)
+			},
+			wantStatus:  fiber.StatusOK,
+			wantSuccess: true,
+		},
+		{
+			name:  "service error",
+			query: "?page=1&limit=10",
+			mockSetup: func(svc *mock.MockShowtimeService) {
+				svc.EXPECT().
+					GetAll(gomock.Any(), 1, 10).
+					Return(nil, errors.New("db error"))
+			},
+			wantStatus:  fiber.StatusInternalServerError,
+			wantSuccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSvc := mock.NewMockShowtimeService(ctrl)
+			tt.mockSetup(mockSvc)
+
+			app := fiber.New()
+			h := handler.NewShowtimeHandler(mockSvc)
+			app.Get("/api/v1/showtimes", h.GetAll)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/showtimes"+tt.query, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+		})
+	}
+}
+
+func TestShowtimeHandler_GetByID(t *testing.T) {
+	id := uuid.New()
+	tests := []struct {
+		name        string
+		id          string
+		mockSetup   func(svc *mock.MockShowtimeService)
+		wantStatus  int
+		wantSuccess bool
+	}{
+		{
+			name: "success",
+			id:   id.String(),
+			mockSetup: func(svc *mock.MockShowtimeService) {
+				svc.EXPECT().
+					GetByID(gomock.Any(), id).
+					Return(&domain.Showtime{MovieTitle: "Inception"}, nil)
+			},
+			wantStatus:  fiber.StatusOK,
+			wantSuccess: true,
+		},
+		{
+			name: "not found",
+			id:   id.String(),
+			mockSetup: func(svc *mock.MockShowtimeService) {
+				svc.EXPECT().
+					GetByID(gomock.Any(), id).
+					Return(nil, errors.New("showtime not found"))
+			},
+			wantStatus:  fiber.StatusNotFound,
+			wantSuccess: false,
+		},
+		{
+			name:        "invalid id",
+			id:          "not-a-uuid",
+			mockSetup:   func(svc *mock.MockShowtimeService) {},
+			wantStatus:  fiber.StatusUnprocessableEntity,
+			wantSuccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSvc := mock.NewMockShowtimeService(ctrl)
+			tt.mockSetup(mockSvc)
+
+			app := fiber.New()
+			h := handler.NewShowtimeHandler(mockSvc)
+			app.Get("/api/v1/showtimes/:id", h.GetByID)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/showtimes/"+tt.id, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+		})
+	}
+}
 
 func TestShowtimeHandler_Create(t *testing.T) {
 	baseTime := time.Now().UTC().Truncate(time.Second)

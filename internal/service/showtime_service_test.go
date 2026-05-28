@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -13,6 +14,115 @@ import (
 	"github.com/firmanains/cinema-ticketing/internal/mock"
 	"github.com/firmanains/cinema-ticketing/internal/service"
 )
+
+func TestShowtimeService_GetAll(t *testing.T) {
+	tests := []struct {
+		name      string
+		page      int
+		limit     int
+		mockSetup func(repo *mock.MockShowtimeRepository)
+		wantErr   bool
+		wantTotal int
+	}{
+		{
+			name:  "success",
+			page:  1,
+			limit: 10,
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					FindAll(gomock.Any(), 1, 10).
+					Return([]domain.Showtime{{MovieTitle: "Inception"}}, 1, nil)
+			},
+			wantErr:   false,
+			wantTotal: 1,
+		},
+		{
+			name:  "repository error",
+			page:  1,
+			limit: 10,
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					FindAll(gomock.Any(), 1, 10).
+					Return(nil, 0, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mock.NewMockShowtimeRepository(ctrl)
+			tt.mockSetup(repo)
+
+			svc := service.NewShowtimeService(repo)
+			result, err := svc.GetAll(context.Background(), tt.page, tt.limit)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.wantTotal, result.Total)
+			}
+		})
+	}
+}
+
+func TestShowtimeService_GetByID(t *testing.T) {
+	id := uuid.New()
+	tests := []struct {
+		name       string
+		mockSetup  func(repo *mock.MockShowtimeRepository)
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name: "success",
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					FindByID(gomock.Any(), id).
+					Return(&domain.Showtime{MovieTitle: "Inception"}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "not found",
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					FindByID(gomock.Any(), id).
+					Return(nil, errors.New("showtime not found"))
+			},
+			wantErr:    true,
+			wantErrMsg: "showtime not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mock.NewMockShowtimeRepository(ctrl)
+			tt.mockSetup(repo)
+
+			svc := service.NewShowtimeService(repo)
+			result, err := svc.GetByID(context.Background(), id)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+		})
+	}
+}
 
 func TestShowtimeService_Create(t *testing.T) {
 	baseTime := time.Now()
