@@ -39,6 +39,10 @@ func NewShowtimeService(repo domain.ShowtimeRepository) domain.ShowtimeService {
 	return &showtimeService{repo: repo}
 }
 
+func (s *showtimeService) Delete(ctx context.Context, id uuid.UUID) error {
+	return s.repo.Delete(ctx, id)
+}
+
 func (s *showtimeService) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
 	if req.StartTime != nil && req.EndTime != nil && !req.EndTime.After(*req.StartTime) {
 		return nil, errors.New("start time must be before end time")

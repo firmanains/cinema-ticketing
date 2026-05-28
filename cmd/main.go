@@ -53,6 +53,7 @@ func main() {
 	api.Get("/showtimes/:id", showtimeHandler.GetByID)
 	api.Post("/showtimes", showtimeHandler.Create)
 	api.Put("/showtimes/:id", showtimeHandler.Update)
+	api.Delete("/showtimes/:id", showtimeHandler.Delete)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {

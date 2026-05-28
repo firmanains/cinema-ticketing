@@ -49,6 +49,22 @@ func (h *ShowtimeHandler) GetByID(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "ok", result)
 }
 
+func (h *ShowtimeHandler) Delete(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid id")
+	}
+
+	if err := h.svc.Delete(c.UserContext(), id); err != nil {
+		if err.Error() == "showtime not found" {
+			return response.Error(c, fiber.StatusNotFound, err.Error())
+		}
+		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+	}
+
+	return response.Success(c, fiber.StatusOK, "showtime deleted", nil)
+}
+
 func (h *ShowtimeHandler) Update(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
