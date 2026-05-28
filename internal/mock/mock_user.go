@@ -109,6 +109,21 @@ func (mr *MockUserServiceMockRecorder) Login(ctx, req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockUserService)(nil).Login), ctx, req)
 }
 
+// Refresh mocks base method.
+func (m *MockUserService) Refresh(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Refresh", ctx, refreshToken)
+	ret0, _ := ret[0].(*domain.AuthResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Refresh indicates an expected call of Refresh.
+func (mr *MockUserServiceMockRecorder) Refresh(ctx, refreshToken any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockUserService)(nil).Refresh), ctx, refreshToken)
+}
+
 // Register mocks base method.
 func (m *MockUserService) Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error) {
 	m.ctrl.T.Helper()

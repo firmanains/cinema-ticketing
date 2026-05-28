@@ -24,4 +24,5 @@ type UserRepository interface {
 type UserService interface {
 	Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error)
 	Login(ctx context.Context, req LoginRequest) (*AuthResponse, error)
+	Refresh(ctx context.Context, refreshToken string) (*AuthResponse, error)
 }
