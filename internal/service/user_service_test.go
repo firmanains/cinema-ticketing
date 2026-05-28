@@ -36,6 +36,56 @@ func newTestConfig() *config.Config {
 	}
 }
 
+func TestUserService_Logout(t *testing.T) {
+	tests := []struct {
+		name         string
+		refreshToken string
+		mockSetup    func(tokenRepo *mock.MockRefreshTokenRepository)
+		wantErr      bool
+	}{
+		{
+			name:         "success",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
+				tokenRepo.EXPECT().
+					RevokeByTokenHash(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:         "revoke fails",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(tokenRepo *mock.MockRefreshTokenRepository) {
+				tokenRepo.EXPECT().
+					RevokeByTokenHash(gomock.Any(), gomock.Any()).
+					Return(errors.New("db error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			userRepo := mock.NewMockUserRepository(ctrl)
+			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
+			tt.mockSetup(tokenRepo)
+
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
+			err := svc.Logout(context.Background(), tt.refreshToken)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestUserService_Refresh(t *testing.T) {
 	tests := []struct {
 		name         string
