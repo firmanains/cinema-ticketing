@@ -49,6 +49,35 @@ func (h *ShowtimeHandler) GetByID(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "ok", result)
 }
 
+func (h *ShowtimeHandler) Update(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid id")
+	}
+
+	var req domain.UpdateShowtimeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
+	}
+	if err := validator.Validate(req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	result, err := h.svc.Update(c.UserContext(), id, req)
+	if err != nil {
+		switch err.Error() {
+		case "showtime not found":
+			return response.Error(c, fiber.StatusNotFound, err.Error())
+		case "no fields to update", "start time must be before end time":
+			return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+		default:
+			return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		}
+	}
+
+	return response.Success(c, fiber.StatusOK, "showtime updated", result)
+}
+
 func (h *ShowtimeHandler) Create(c *fiber.Ctx) error {
 	var req domain.CreateShowtimeRequest
 	if err := c.BodyParser(&req); err != nil {

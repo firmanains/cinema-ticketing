@@ -39,6 +39,19 @@ func NewShowtimeService(repo domain.ShowtimeRepository) domain.ShowtimeService {
 	return &showtimeService{repo: repo}
 }
 
+func (s *showtimeService) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
+	if req.StartTime != nil && req.EndTime != nil && !req.EndTime.After(*req.StartTime) {
+		return nil, errors.New("start time must be before end time")
+	}
+
+	showtime, err := s.repo.Update(ctx, id, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return showtime, nil
+}
+
 func (s *showtimeService) Create(ctx context.Context, req domain.CreateShowtimeRequest) (*domain.Showtime, error) {
 	if !req.EndTime.After(req.StartTime) {
 		return nil, errors.New("start time must be before end time")
