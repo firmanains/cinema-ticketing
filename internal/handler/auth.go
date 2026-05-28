@@ -60,17 +60,15 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
-	var body struct {
-		RefreshToken string `json:"refresh_token" validate:"required"`
-	}
-	if err := c.BodyParser(&body); err != nil {
+	var req domain.RefreshTokenRequest
+	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
 	}
-	if err := validator.Validate(body); err != nil {
+	if err := validator.Validate(req); err != nil {
 		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	result, err := h.userSvc.Refresh(c.UserContext(), body.RefreshToken)
+	result, err := h.userSvc.Refresh(c.UserContext(), req.RefreshToken)
 	if err != nil {
 		return response.ErrorFromDomain(c, err)
 	}
@@ -79,17 +77,15 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	var body struct {
-		RefreshToken string `json:"refresh_token" validate:"required"`
-	}
-	if err := c.BodyParser(&body); err != nil {
+	var req domain.RefreshTokenRequest
+	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
 	}
-	if err := validator.Validate(body); err != nil {
+	if err := validator.Validate(req); err != nil {
 		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	if err := h.userSvc.Logout(c.UserContext(), body.RefreshToken); err != nil {
+	if err := h.userSvc.Logout(c.UserContext(), req.RefreshToken); err != nil {
 		return response.ErrorFromDomain(c, err)
 	}
 
