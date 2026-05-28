@@ -5,7 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	"crypto/sha256"
+	"encoding/hex"
+	"time"
+
 	"github.com/alicebob/miniredis/v2"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -28,6 +33,79 @@ func newTestConfig() *config.Config {
 		JWTSecret:               "testsecret",
 		JWTAccessExpiresMinutes: 30,
 		JWTRefreshExpiresDays:   7,
+	}
+}
+
+func TestUserService_Refresh(t *testing.T) {
+	tests := []struct {
+		name         string
+		refreshToken string
+		mockSetup    func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, rdb *redis.Client)
+		wantErr      bool
+		wantErrMsg   string
+	}{
+		{
+			name:         "success - cache hit",
+			refreshToken: "plaintexttoken",
+			mockSetup: func(_ *mock.MockUserRepository, _ *mock.MockRefreshTokenRepository, rdb *redis.Client) {
+				userID := uuid.New()
+				sum := sha256.Sum256([]byte("plaintexttoken"))
+				hash := hex.EncodeToString(sum[:])
+				rdb.Set(context.Background(), "refresh_token:"+hash, userID.String(), time.Minute)
+			},
+			wantErr: false,
+		},
+		{
+			name:         "success - cache miss, db hit",
+			refreshToken: "plaintexttoken2",
+			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
+				userID := uuid.New()
+				tokenRepo.EXPECT().
+					FindByTokenHash(gomock.Any(), gomock.Any()).
+					Return(&domain.RefreshToken{
+						UserID:    userID,
+						ExpiresAt: time.Now().Add(24 * time.Hour),
+					}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:         "token not found",
+			refreshToken: "badtoken",
+			mockSetup: func(_ *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository, _ *redis.Client) {
+				tokenRepo.EXPECT().
+					FindByTokenHash(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("token is invalid or expired"))
+			},
+			wantErr:    true,
+			wantErrMsg: "token is invalid or expired",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			userRepo := mock.NewMockUserRepository(ctrl)
+			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
+			rdb := newTestRedis(t)
+			tt.mockSetup(userRepo, tokenRepo, rdb)
+
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), rdb)
+			result, err := svc.Refresh(context.Background(), tt.refreshToken)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.NotEmpty(t, result.AccessToken)
+				assert.Equal(t, tt.refreshToken, result.RefreshToken)
+			}
+		})
 	}
 }
 
