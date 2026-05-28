@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/firmanains/cinema-ticketing/internal/domain"
@@ -16,6 +17,35 @@ type showtimeRepository struct {
 
 func NewShowtimeRepository(db *sqlx.DB) domain.ShowtimeRepository {
 	return &showtimeRepository{db: db}
+}
+
+func (r *showtimeRepository) FindAll(ctx context.Context, page, limit int) ([]domain.Showtime, int, error) {
+	offset := (page - 1) * limit
+
+	var total int
+	if err := r.db.GetContext(ctx, &total, "SELECT COUNT(*) FROM showtimes"); err != nil {
+		return nil, 0, err
+	}
+
+	var showtimes []domain.Showtime
+	err := r.db.SelectContext(ctx, &showtimes,
+		"SELECT * FROM showtimes ORDER BY start_time ASC LIMIT $1 OFFSET $2",
+		limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return showtimes, total, nil
+}
+
+func (r *showtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Showtime, error) {
+	var s domain.Showtime
+	err := r.db.GetContext(ctx, &s, "SELECT * FROM showtimes WHERE id = $1", id)
+	if err != nil {
+		return nil, errors.New("showtime not found")
+	}
+	return &s, nil
 }
 
 func (r *showtimeRepository) Create(ctx context.Context, s *domain.Showtime) error {

@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/firmanains/cinema-ticketing/internal/domain"
+	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -55,6 +56,37 @@ func (mr *MockShowtimeRepositoryMockRecorder) Create(ctx, showtime any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShowtimeRepository)(nil).Create), ctx, showtime)
 }
 
+// FindAll mocks base method.
+func (m *MockShowtimeRepository) FindAll(ctx context.Context, page, limit int) ([]domain.Showtime, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAll", ctx, page, limit)
+	ret0, _ := ret[0].([]domain.Showtime)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// FindAll indicates an expected call of FindAll.
+func (mr *MockShowtimeRepositoryMockRecorder) FindAll(ctx, page, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAll", reflect.TypeOf((*MockShowtimeRepository)(nil).FindAll), ctx, page, limit)
+}
+
+// FindByID mocks base method.
+func (m *MockShowtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Showtime, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByID", ctx, id)
+	ret0, _ := ret[0].(*domain.Showtime)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindByID indicates an expected call of FindByID.
+func (mr *MockShowtimeRepositoryMockRecorder) FindByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockShowtimeRepository)(nil).FindByID), ctx, id)
+}
+
 // MockShowtimeService is a mock of ShowtimeService interface.
 type MockShowtimeService struct {
 	ctrl     *gomock.Controller
@@ -92,4 +124,34 @@ func (m *MockShowtimeService) Create(ctx context.Context, req domain.CreateShowt
 func (mr *MockShowtimeServiceMockRecorder) Create(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShowtimeService)(nil).Create), ctx, req)
+}
+
+// GetAll mocks base method.
+func (m *MockShowtimeService) GetAll(ctx context.Context, page, limit int) (*domain.PaginatedResult[domain.Showtime], error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAll", ctx, page, limit)
+	ret0, _ := ret[0].(*domain.PaginatedResult[domain.Showtime])
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAll indicates an expected call of GetAll.
+func (mr *MockShowtimeServiceMockRecorder) GetAll(ctx, page, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockShowtimeService)(nil).GetAll), ctx, page, limit)
+}
+
+// GetByID mocks base method.
+func (m *MockShowtimeService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Showtime, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret0, _ := ret[0].(*domain.Showtime)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockShowtimeServiceMockRecorder) GetByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockShowtimeService)(nil).GetByID), ctx, id)
 }
