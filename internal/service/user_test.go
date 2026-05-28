@@ -149,6 +149,21 @@ func TestUserService_Login(t *testing.T) {
 			wantErr:    true,
 			wantErrMsg: "invalid credentials",
 		},
+		{
+			name:  "store refresh token fails",
+			input: domain.LoginRequest{Email: "john@example.com", Password: "secret123"},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+				userRepo.EXPECT().
+					FindByEmail(gomock.Any(), "john@example.com").
+					Return(&domain.User{PasswordHash: string(hash)}, nil)
+				tokenRepo.EXPECT().
+					Store(gomock.Any(), gomock.Any()).
+					Return(errors.New("db error"))
+			},
+			wantErr:    true,
+			wantErrMsg: "db error",
+		},
 	}
 
 	for _, tt := range tests {
@@ -217,6 +232,17 @@ func TestUserService_Refresh(t *testing.T) {
 				tokenRepo.EXPECT().
 					FindByTokenHash(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("token is invalid or expired"))
+			},
+			wantErr:    true,
+			wantErrMsg: "token is invalid or expired",
+		},
+		{
+			name:         "invalid uuid in cache",
+			refreshToken: "plaintexttoken3",
+			mockSetup: func(_ *mock.MockUserRepository, _ *mock.MockRefreshTokenRepository, rdb *redis.Client) {
+				sum := sha256.Sum256([]byte("plaintexttoken3"))
+				hash := hex.EncodeToString(sum[:])
+				rdb.Set(context.Background(), "refresh_token:"+hash, "not-a-valid-uuid", time.Minute)
 			},
 			wantErr:    true,
 			wantErrMsg: "token is invalid or expired",
