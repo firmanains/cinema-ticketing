@@ -56,6 +56,20 @@ func (mr *MockRefreshTokenRepositoryMockRecorder) FindByTokenHash(ctx, tokenHash
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByTokenHash", reflect.TypeOf((*MockRefreshTokenRepository)(nil).FindByTokenHash), ctx, tokenHash)
 }
 
+// RevokeByTokenHash mocks base method.
+func (m *MockRefreshTokenRepository) RevokeByTokenHash(ctx context.Context, tokenHash string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeByTokenHash", ctx, tokenHash)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeByTokenHash indicates an expected call of RevokeByTokenHash.
+func (mr *MockRefreshTokenRepositoryMockRecorder) RevokeByTokenHash(ctx, tokenHash any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeByTokenHash", reflect.TypeOf((*MockRefreshTokenRepository)(nil).RevokeByTokenHash), ctx, tokenHash)
+}
+
 // Store mocks base method.
 func (m *MockRefreshTokenRepository) Store(ctx context.Context, token *domain.RefreshToken) error {
 	m.ctrl.T.Helper()

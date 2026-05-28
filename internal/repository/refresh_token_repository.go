@@ -29,6 +29,14 @@ func (r *refreshTokenRepository) FindByTokenHash(ctx context.Context, tokenHash 
 	return &token, nil
 }
 
+func (r *refreshTokenRepository) RevokeByTokenHash(ctx context.Context, tokenHash string) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = $1",
+		tokenHash,
+	)
+	return err
+}
+
 func (r *refreshTokenRepository) Store(ctx context.Context, token *domain.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
