@@ -104,11 +104,20 @@ func TestUserService_Register(t *testing.T) {
 	}
 }
 
+func newDeadRedis() *redis.Client {
+	mr := miniredis.NewMiniRedis()
+	mr.Start()
+	addr := mr.Addr()
+	mr.Close()
+	return redis.NewClient(&redis.Options{Addr: addr})
+}
+
 func TestUserService_Login(t *testing.T) {
 	tests := []struct {
 		name       string
 		input      domain.LoginRequest
 		mockSetup  func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository)
+		rdb        *redis.Client
 		wantErr    bool
 		wantErrMsg string
 	}{
@@ -164,6 +173,21 @@ func TestUserService_Login(t *testing.T) {
 			wantErr:    true,
 			wantErrMsg: "db error",
 		},
+		{
+			name:  "redis set fails after store",
+			input: domain.LoginRequest{Email: "john@example.com", Password: "secret123"},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+				userRepo.EXPECT().
+					FindByEmail(gomock.Any(), "john@example.com").
+					Return(&domain.User{PasswordHash: string(hash)}, nil)
+				tokenRepo.EXPECT().
+					Store(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			rdb:     newDeadRedis(),
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,7 +199,12 @@ func TestUserService_Login(t *testing.T) {
 			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
 			tt.mockSetup(userRepo, tokenRepo)
 
-			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
+			rdb := tt.rdb
+			if rdb == nil {
+				rdb = newTestRedis(t)
+			}
+
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), rdb)
 			result, err := svc.Login(context.Background(), tt.input)
 
 			if tt.wantErr {
