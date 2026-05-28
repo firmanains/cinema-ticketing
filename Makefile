@@ -1,4 +1,4 @@
-.PHONY: run down migrate-up migrate-down test
+.PHONY: run down migrate-up migrate-down test test-coverage
 
 run:
 	docker compose up -d postgres redis
@@ -16,3 +16,6 @@ down:
 
 test:
 	go test ./...
+
+test-coverage:
+	go test ./... -coverprofile=coverage.out && go tool cover -html=coverage.out
