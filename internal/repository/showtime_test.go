@@ -3,6 +3,7 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,30 +17,54 @@ import (
 )
 
 func TestShowtimeRepository_Create(t *testing.T) {
+	newShowtime := func() *domain.Showtime {
+		return &domain.Showtime{
+			ID:          uuid.New(),
+			MovieTitle:  "Inception",
+			StartTime:   time.Now(),
+			EndTime:     time.Now().Add(2 * time.Hour),
+			Price:       50000,
+			TotalSeats:  100,
+			BookedSeats: 0,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+	}
 	tests := []struct {
-		name      string
-		showtime  *domain.Showtime
-		mockSetup func(m sqlmock.Sqlmock)
-		wantErr   bool
+		name       string
+		showtime   *domain.Showtime
+		mockSetup  func(m sqlmock.Sqlmock)
+		wantErr    bool
+		wantErrMsg string
 	}{
 		{
-			name: "success",
-			showtime: &domain.Showtime{
-				ID:          uuid.New(),
-				MovieTitle:  "Inception",
-				StartTime:   time.Now(),
-				EndTime:     time.Now().Add(2 * time.Hour),
-				Price:       50000,
-				TotalSeats:  100,
-				BookedSeats: 0,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   time.Now(),
-			},
+			name:     "success",
+			showtime: newShowtime(),
 			mockSetup: func(m sqlmock.Sqlmock) {
 				m.ExpectExec("INSERT INTO showtimes").
 					WillReturnResult(sqlmock.NewResult(1, 1))
 			},
 			wantErr: false,
+		},
+		{
+			name:     "invalid time range",
+			showtime: newShowtime(),
+			mockSetup: func(m sqlmock.Sqlmock) {
+				m.ExpectExec("INSERT INTO showtimes").
+					WillReturnError(fmt.Errorf("invalid time range constraint violated"))
+			},
+			wantErr:    true,
+			wantErrMsg: "start time must be before end time",
+		},
+		{
+			name:     "db error",
+			showtime: newShowtime(),
+			mockSetup: func(m sqlmock.Sqlmock) {
+				m.ExpectExec("INSERT INTO showtimes").
+					WillReturnError(fmt.Errorf("connection refused"))
+			},
+			wantErr:    true,
+			wantErrMsg: "connection refused",
 		},
 	}
 
@@ -57,6 +82,9 @@ func TestShowtimeRepository_Create(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				if tt.wantErrMsg != "" {
+					assert.Contains(t, err.Error(), tt.wantErrMsg)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
@@ -95,6 +123,30 @@ func TestShowtimeRepository_FindAll(t *testing.T) {
 			wantErr:   false,
 			wantTotal: 1,
 			wantLen:   1,
+		},
+		{
+			name:  "count query error",
+			page:  1,
+			limit: 10,
+			mockSetup: func(m sqlmock.Sqlmock) {
+				m.ExpectQuery("SELECT COUNT").
+					WillReturnError(fmt.Errorf("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:  "select query error",
+			page:  1,
+			limit: 10,
+			mockSetup: func(m sqlmock.Sqlmock) {
+				countRows := sqlmock.NewRows([]string{"count"}).AddRow(1)
+				m.ExpectQuery("SELECT COUNT").WillReturnRows(countRows)
+
+				m.ExpectQuery("SELECT \\* FROM showtimes ORDER BY").
+					WithArgs(10, 0).
+					WillReturnError(fmt.Errorf("db error"))
+			},
+			wantErr: true,
 		},
 	}
 
