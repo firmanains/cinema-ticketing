@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -9,11 +11,19 @@ import (
 	"github.com/firmanains/cinema-ticketing/pkg/validator"
 )
 
-type ShowtimeHandler struct {
-	svc domain.ShowtimeService
+type ShowtimeService interface {
+	Create(ctx context.Context, req domain.CreateShowtimeRequest) (*domain.Showtime, error)
+	GetAll(ctx context.Context, page, limit int) (*domain.PaginatedResult[domain.Showtime], error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Showtime, error)
+	Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-func NewShowtimeHandler(svc domain.ShowtimeService) *ShowtimeHandler {
+type ShowtimeHandler struct {
+	svc ShowtimeService
+}
+
+func NewShowtimeHandler(svc ShowtimeService) *ShowtimeHandler {
 	return &ShowtimeHandler{svc: svc}
 }
 
@@ -49,20 +59,24 @@ func (h *ShowtimeHandler) GetByID(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "ok", result)
 }
 
-func (h *ShowtimeHandler) Delete(c *fiber.Ctx) error {
-	id, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid id")
+func (h *ShowtimeHandler) Create(c *fiber.Ctx) error {
+	var req domain.CreateShowtimeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
+	}
+	if err := validator.Validate(req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	if err := h.svc.Delete(c.UserContext(), id); err != nil {
-		if err.Error() == "showtime not found" {
-			return response.Error(c, fiber.StatusNotFound, err.Error())
+	result, err := h.svc.Create(c.UserContext(), req)
+	if err != nil {
+		if err.Error() == "start time must be before end time" {
+			return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
 	}
 
-	return response.Success(c, fiber.StatusOK, "showtime deleted", nil)
+	return response.Success(c, fiber.StatusCreated, "showtime created", result)
 }
 
 func (h *ShowtimeHandler) Update(c *fiber.Ctx) error {
@@ -94,22 +108,18 @@ func (h *ShowtimeHandler) Update(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "showtime updated", result)
 }
 
-func (h *ShowtimeHandler) Create(c *fiber.Ctx) error {
-	var req domain.CreateShowtimeRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
-	}
-	if err := validator.Validate(req); err != nil {
-		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+func (h *ShowtimeHandler) Delete(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid id")
 	}
 
-	result, err := h.svc.Create(c.UserContext(), req)
-	if err != nil {
-		if err.Error() == "start time must be before end time" {
-			return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+	if err := h.svc.Delete(c.UserContext(), id); err != nil {
+		if err.Error() == "showtime not found" {
+			return response.Error(c, fiber.StatusNotFound, err.Error())
 		}
 		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
 	}
 
-	return response.Success(c, fiber.StatusCreated, "showtime created", result)
+	return response.Success(c, fiber.StatusOK, "showtime deleted", nil)
 }
