@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 	"github.com/firmanains/cinema-ticketing/pkg/response"
@@ -14,6 +15,38 @@ type ShowtimeHandler struct {
 
 func NewShowtimeHandler(svc domain.ShowtimeService) *ShowtimeHandler {
 	return &ShowtimeHandler{svc: svc}
+}
+
+func (h *ShowtimeHandler) GetAll(c *fiber.Ctx) error {
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	result, err := h.svc.GetAll(c.UserContext(), page, limit)
+	if err != nil {
+		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+	}
+
+	return response.Success(c, fiber.StatusOK, "ok", result)
+}
+
+func (h *ShowtimeHandler) GetByID(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid id")
+	}
+
+	result, err := h.svc.GetByID(c.UserContext(), id)
+	if err != nil {
+		return response.Error(c, fiber.StatusNotFound, err.Error())
+	}
+
+	return response.Success(c, fiber.StatusOK, "ok", result)
 }
 
 func (h *ShowtimeHandler) Create(c *fiber.Ctx) error {

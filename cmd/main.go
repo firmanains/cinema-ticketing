@@ -49,6 +49,8 @@ func main() {
 	api.Post("/auth/refresh", authHandler.Refresh)
 	api.Post("/auth/logout", authHandler.Logout)
 
+	api.Get("/showtimes", showtimeHandler.GetAll)
+	api.Get("/showtimes/:id", showtimeHandler.GetByID)
 	api.Post("/showtimes", showtimeHandler.Create)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
