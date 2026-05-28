@@ -35,7 +35,11 @@ func main() {
 	tokenRepo := repository.NewRefreshTokenRepository(db)
 	userSvc := service.NewUserService(userRepo, tokenRepo, cfg, rdb)
 
+	showtimeRepo := repository.NewShowtimeRepository(db)
+	showtimeSvc := service.NewShowtimeService(showtimeRepo)
+
 	authHandler := handler.NewAuthHandler(userSvc)
+	showtimeHandler := handler.NewShowtimeHandler(showtimeSvc)
 
 	app := fiber.New()
 
@@ -44,6 +48,8 @@ func main() {
 	api.Post("/auth/login", authHandler.Login)
 	api.Post("/auth/refresh", authHandler.Refresh)
 	api.Post("/auth/logout", authHandler.Logout)
+
+	api.Post("/showtimes", showtimeHandler.Create)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
