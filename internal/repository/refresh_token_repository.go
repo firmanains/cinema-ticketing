@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jmoiron/sqlx"
 
@@ -14,6 +15,18 @@ type refreshTokenRepository struct {
 
 func NewRefreshTokenRepository(db *sqlx.DB) domain.RefreshTokenRepository {
 	return &refreshTokenRepository{db: db}
+}
+
+func (r *refreshTokenRepository) FindByTokenHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error) {
+	var token domain.RefreshToken
+	err := r.db.GetContext(ctx, &token,
+		"SELECT * FROM refresh_tokens WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
+		tokenHash,
+	)
+	if err != nil {
+		return nil, errors.New("token is invalid or expired")
+	}
+	return &token, nil
 }
 
 func (r *refreshTokenRepository) Store(ctx context.Context, token *domain.RefreshToken) error {

@@ -18,4 +18,5 @@ type RefreshToken struct {
 
 type RefreshTokenRepository interface {
 	Store(ctx context.Context, token *RefreshToken) error
+	FindByTokenHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
 }

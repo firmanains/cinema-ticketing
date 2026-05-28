@@ -41,6 +41,21 @@ func (m *MockRefreshTokenRepository) EXPECT() *MockRefreshTokenRepositoryMockRec
 	return m.recorder
 }
 
+// FindByTokenHash mocks base method.
+func (m *MockRefreshTokenRepository) FindByTokenHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByTokenHash", ctx, tokenHash)
+	ret0, _ := ret[0].(*domain.RefreshToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindByTokenHash indicates an expected call of FindByTokenHash.
+func (mr *MockRefreshTokenRepositoryMockRecorder) FindByTokenHash(ctx, tokenHash any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByTokenHash", reflect.TypeOf((*MockRefreshTokenRepository)(nil).FindByTokenHash), ctx, tokenHash)
+}
+
 // Store mocks base method.
 func (m *MockRefreshTokenRepository) Store(ctx context.Context, token *domain.RefreshToken) error {
 	m.ctrl.T.Helper()
