@@ -208,6 +208,8 @@ func TestShowtimeService_GetByID(t *testing.T) {
 func TestShowtimeService_Update(t *testing.T) {
 	id := uuid.New()
 	title := "Interstellar"
+	now := time.Now()
+	start := now.Add(time.Hour)
 	tests := []struct {
 		name       string
 		req        domain.UpdateShowtimeRequest
@@ -215,6 +217,13 @@ func TestShowtimeService_Update(t *testing.T) {
 		wantErr    bool
 		wantErrMsg string
 	}{
+		{
+			name:       "invalid time range",
+			req:        domain.UpdateShowtimeRequest{StartTime: &start, EndTime: &now},
+			mockSetup:  func(repo *mock.MockShowtimeRepository) {},
+			wantErr:    true,
+			wantErrMsg: "start time must be before end time",
+		},
 		{
 			name: "success",
 			req:  domain.UpdateShowtimeRequest{MovieTitle: &title},
