@@ -49,6 +49,18 @@ func (r *showtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	return &s, nil
 }
 
+func (r *showtimeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.ExecContext(ctx, "DELETE FROM showtimes WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return errors.New("showtime not found")
+	}
+	return nil
+}
+
 func (r *showtimeRepository) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
 	existing, err := r.FindByID(ctx, id)
 	if err != nil {

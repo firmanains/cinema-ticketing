@@ -56,6 +56,20 @@ func (mr *MockShowtimeRepositoryMockRecorder) Create(ctx, showtime any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShowtimeRepository)(nil).Create), ctx, showtime)
 }
 
+// Delete mocks base method.
+func (m *MockShowtimeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockShowtimeRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockShowtimeRepository)(nil).Delete), ctx, id)
+}
+
 // FindAll mocks base method.
 func (m *MockShowtimeRepository) FindAll(ctx context.Context, page, limit int) ([]domain.Showtime, int, error) {
 	m.ctrl.T.Helper()
@@ -139,6 +153,20 @@ func (m *MockShowtimeService) Create(ctx context.Context, req domain.CreateShowt
 func (mr *MockShowtimeServiceMockRecorder) Create(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShowtimeService)(nil).Create), ctx, req)
+}
+
+// Delete mocks base method.
+func (m *MockShowtimeService) Delete(ctx context.Context, id uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockShowtimeServiceMockRecorder) Delete(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockShowtimeService)(nil).Delete), ctx, id)
 }
 
 // GetAll mocks base method.

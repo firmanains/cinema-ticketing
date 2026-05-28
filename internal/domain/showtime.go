@@ -24,6 +24,7 @@ type ShowtimeRepository interface {
 	FindAll(ctx context.Context, page, limit int) ([]Showtime, int, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*Showtime, error)
 	Update(ctx context.Context, id uuid.UUID, req UpdateShowtimeRequest) (*Showtime, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 type ShowtimeService interface {
@@ -31,4 +32,5 @@ type ShowtimeService interface {
 	GetAll(ctx context.Context, page, limit int) (*PaginatedResult[Showtime], error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Showtime, error)
 	Update(ctx context.Context, id uuid.UUID, req UpdateShowtimeRequest) (*Showtime, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
