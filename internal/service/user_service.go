@@ -74,6 +74,38 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterRequest) 
 	}, nil
 }
 
+func (s *userService) Refresh(ctx context.Context, refreshToken string) (*domain.AuthResponse, error) {
+	sum := sha256.Sum256([]byte(refreshToken))
+	tokenHash := hex.EncodeToString(sum[:])
+
+	key := fmt.Sprintf("refresh_token:%s", tokenHash)
+	userIDStr, err := s.rdb.Get(ctx, key).Result()
+	if err != nil {
+		token, dbErr := s.tokenRepo.FindByTokenHash(ctx, tokenHash)
+		if dbErr != nil {
+			return nil, errors.New("token is invalid or expired")
+		}
+		userIDStr = token.UserID.String()
+		ttl := time.Until(token.ExpiresAt)
+		_ = s.rdb.Set(ctx, key, userIDStr, ttl).Err()
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, errors.New("token is invalid or expired")
+	}
+
+	accessToken, err := s.generateAccessToken(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
 func (s *userService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
