@@ -124,6 +124,73 @@ func TestShowtimeService_GetByID(t *testing.T) {
 	}
 }
 
+func TestShowtimeService_Update(t *testing.T) {
+	id := uuid.New()
+	title := "Interstellar"
+	tests := []struct {
+		name       string
+		req        domain.UpdateShowtimeRequest
+		mockSetup  func(repo *mock.MockShowtimeRepository)
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name: "success",
+			req:  domain.UpdateShowtimeRequest{MovieTitle: &title},
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					Update(gomock.Any(), id, gomock.Any()).
+					Return(&domain.Showtime{MovieTitle: title}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "no fields to update",
+			req:        domain.UpdateShowtimeRequest{},
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					Update(gomock.Any(), id, gomock.Any()).
+					Return(nil, errors.New("no fields to update"))
+			},
+			wantErr:    true,
+			wantErrMsg: "no fields to update",
+		},
+		{
+			name: "not found",
+			req:  domain.UpdateShowtimeRequest{MovieTitle: &title},
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					Update(gomock.Any(), id, gomock.Any()).
+					Return(nil, errors.New("showtime not found"))
+			},
+			wantErr:    true,
+			wantErrMsg: "showtime not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mock.NewMockShowtimeRepository(ctrl)
+			tt.mockSetup(repo)
+
+			svc := service.NewShowtimeService(repo)
+			result, err := svc.Update(context.Background(), id, tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+		})
+	}
+}
+
 func TestShowtimeService_Create(t *testing.T) {
 	baseTime := time.Now()
 	tests := []struct {
