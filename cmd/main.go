@@ -41,6 +41,7 @@ func main() {
 
 	api := app.Group("/api/v1")
 	api.Post("/auth/register", authHandler.Register)
+	api.Post("/auth/login", authHandler.Login)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {

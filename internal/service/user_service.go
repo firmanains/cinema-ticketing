@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,6 +56,32 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterRequest) 
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
+	}
+
+	accessToken, err := s.generateAccessToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.generateAndStoreRefreshToken(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *userService) Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error) {
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid credentials")
 	}
 
 	accessToken, err := s.generateAccessToken(user.ID)

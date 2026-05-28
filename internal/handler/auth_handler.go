@@ -16,6 +16,23 @@ func NewAuthHandler(userSvc domain.UserService) *AuthHandler {
 	return &AuthHandler{userSvc: userSvc}
 }
 
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	var req domain.LoginRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, "invalid request body")
+	}
+	if err := validator.Validate(req); err != nil {
+		return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
+	}
+
+	result, err := h.userSvc.Login(c.UserContext(), req)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, err.Error())
+	}
+
+	return response.Success(c, fiber.StatusOK, "login successful", result)
+}
+
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req domain.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
