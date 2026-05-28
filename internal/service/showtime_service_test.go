@@ -124,6 +124,56 @@ func TestShowtimeService_GetByID(t *testing.T) {
 	}
 }
 
+func TestShowtimeService_Delete(t *testing.T) {
+	id := uuid.New()
+	tests := []struct {
+		name       string
+		mockSetup  func(repo *mock.MockShowtimeRepository)
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name: "success",
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					Delete(gomock.Any(), id).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "not found",
+			mockSetup: func(repo *mock.MockShowtimeRepository) {
+				repo.EXPECT().
+					Delete(gomock.Any(), id).
+					Return(errors.New("showtime not found"))
+			},
+			wantErr:    true,
+			wantErrMsg: "showtime not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mock.NewMockShowtimeRepository(ctrl)
+			tt.mockSetup(repo)
+
+			svc := service.NewShowtimeService(repo)
+			err := svc.Delete(context.Background(), id)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestShowtimeService_Update(t *testing.T) {
 	id := uuid.New()
 	title := "Interstellar"
