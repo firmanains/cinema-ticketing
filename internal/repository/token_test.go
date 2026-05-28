@@ -3,6 +3,7 @@ package repository_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -113,6 +114,61 @@ func TestRefreshTokenRepository_Store(t *testing.T) {
 
 			if tt.wantErr {
 				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestRefreshTokenRepository_RevokeByTokenHash(t *testing.T) {
+	tests := []struct {
+		name       string
+		tokenHash  string
+		mockSetup  func(m sqlmock.Sqlmock)
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name:      "success",
+			tokenHash: "somehash",
+			mockSetup: func(m sqlmock.Sqlmock) {
+				m.ExpectExec("UPDATE refresh_tokens").
+					WithArgs("somehash").
+					WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+			wantErr: false,
+		},
+		{
+			name:      "db error",
+			tokenHash: "somehash",
+			mockSetup: func(m sqlmock.Sqlmock) {
+				m.ExpectExec("UPDATE refresh_tokens").
+					WithArgs("somehash").
+					WillReturnError(fmt.Errorf("connection refused"))
+			},
+			wantErr:    true,
+			wantErrMsg: "connection refused",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			assert.NoError(t, err)
+			defer db.Close()
+
+			sqlxDB := sqlx.NewDb(db, "postgres")
+			tt.mockSetup(mock)
+
+			repo := repository.NewRefreshTokenRepository(sqlxDB)
+			err = repo.RevokeByTokenHash(context.Background(), tt.tokenHash)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
 			} else {
 				assert.NoError(t, err)
 			}
