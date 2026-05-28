@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/firmanains/cinema-ticketing/internal/constants"
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 )
 
 type Response struct {
@@ -32,19 +32,19 @@ func Error(c *fiber.Ctx, status int, message string) error {
 
 func ErrorFromDomain(c *fiber.Ctx, err error) error {
 	switch {
-	case errors.Is(err, constants.ErrUserNotFound):
+	case errors.Is(err, constant.ErrUserNotFound):
 		return Error(c, fiber.StatusNotFound, err.Error())
-	case errors.Is(err, constants.ErrShowtimeNotFound):
+	case errors.Is(err, constant.ErrShowtimeNotFound):
 		return Error(c, fiber.StatusNotFound, err.Error())
-	case errors.Is(err, constants.ErrInvalidCredentials):
+	case errors.Is(err, constant.ErrInvalidCredentials):
 		return Error(c, fiber.StatusUnauthorized, err.Error())
-	case errors.Is(err, constants.ErrTokenInvalid):
+	case errors.Is(err, constant.ErrTokenInvalid):
 		return Error(c, fiber.StatusUnauthorized, err.Error())
-	case errors.Is(err, constants.ErrDuplicateEmail):
+	case errors.Is(err, constant.ErrDuplicateEmail):
 		return Error(c, fiber.StatusConflict, err.Error())
-	case errors.Is(err, constants.ErrInvalidTimeRange):
+	case errors.Is(err, constant.ErrInvalidTimeRange):
 		return Error(c, fiber.StatusUnprocessableEntity, err.Error())
-	case errors.Is(err, constants.ErrNoFieldsToUpdate):
+	case errors.Is(err, constant.ErrNoFieldsToUpdate):
 		return Error(c, fiber.StatusUnprocessableEntity, err.Error())
 	default:
 		return Error(c, fiber.StatusInternalServerError, "internal server error")
