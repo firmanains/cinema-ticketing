@@ -23,10 +23,12 @@ type ShowtimeRepository interface {
 	Create(ctx context.Context, showtime *Showtime) error
 	FindAll(ctx context.Context, page, limit int) ([]Showtime, int, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*Showtime, error)
+	Update(ctx context.Context, id uuid.UUID, req UpdateShowtimeRequest) (*Showtime, error)
 }
 
 type ShowtimeService interface {
 	Create(ctx context.Context, req CreateShowtimeRequest) (*Showtime, error)
 	GetAll(ctx context.Context, page, limit int) (*PaginatedResult[Showtime], error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Showtime, error)
+	Update(ctx context.Context, id uuid.UUID, req UpdateShowtimeRequest) (*Showtime, error)
 }

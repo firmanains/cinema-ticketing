@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -46,6 +47,47 @@ func (r *showtimeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 		return nil, errors.New("showtime not found")
 	}
 	return &s, nil
+}
+
+func (r *showtimeRepository) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
+	existing, err := r.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.MovieTitle != nil {
+		existing.MovieTitle = *req.MovieTitle
+	}
+	if req.StartTime != nil {
+		existing.StartTime = *req.StartTime
+	}
+	if req.EndTime != nil {
+		existing.EndTime = *req.EndTime
+	}
+	if req.Price != nil {
+		existing.Price = *req.Price
+	}
+	if req.TotalSeats != nil {
+		existing.TotalSeats = *req.TotalSeats
+	}
+
+	if req.MovieTitle == nil && req.StartTime == nil && req.EndTime == nil && req.Price == nil && req.TotalSeats == nil {
+		return nil, errors.New("no fields to update")
+	}
+
+	existing.UpdatedAt = time.Now()
+
+	_, err = r.db.NamedExecContext(ctx, `
+		UPDATE showtimes
+		SET movie_title = :movie_title, start_time = :start_time, end_time = :end_time,
+		    price = :price, total_seats = :total_seats, updated_at = :updated_at
+		WHERE id = :id
+	`, existing)
+	if err != nil {
+		return nil, err
+	}
+
+	return existing, nil
 }
 
 func (r *showtimeRepository) Create(ctx context.Context, s *domain.Showtime) error {

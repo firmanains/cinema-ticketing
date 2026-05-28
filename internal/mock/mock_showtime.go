@@ -87,6 +87,21 @@ func (mr *MockShowtimeRepositoryMockRecorder) FindByID(ctx, id any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockShowtimeRepository)(nil).FindByID), ctx, id)
 }
 
+// Update mocks base method.
+func (m *MockShowtimeRepository) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, id, req)
+	ret0, _ := ret[0].(*domain.Showtime)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockShowtimeRepositoryMockRecorder) Update(ctx, id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockShowtimeRepository)(nil).Update), ctx, id, req)
+}
+
 // MockShowtimeService is a mock of ShowtimeService interface.
 type MockShowtimeService struct {
 	ctrl     *gomock.Controller
@@ -154,4 +169,19 @@ func (m *MockShowtimeService) GetByID(ctx context.Context, id uuid.UUID) (*domai
 func (mr *MockShowtimeServiceMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockShowtimeService)(nil).GetByID), ctx, id)
+}
+
+// Update mocks base method.
+func (m *MockShowtimeService) Update(ctx context.Context, id uuid.UUID, req domain.UpdateShowtimeRequest) (*domain.Showtime, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, id, req)
+	ret0, _ := ret[0].(*domain.Showtime)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockShowtimeServiceMockRecorder) Update(ctx, id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockShowtimeService)(nil).Update), ctx, id, req)
 }
