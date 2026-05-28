@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 	"github.com/firmanains/cinema-ticketing/internal/handler"
 	"github.com/firmanains/cinema-ticketing/internal/mock"
@@ -53,7 +54,7 @@ func TestAuthHandler_Register(t *testing.T) {
 			mockSetup: func(svc *mock.MockUserService) {
 				svc.EXPECT().
 					Register(gomock.Any(), gomock.Any()).
-					Return(nil, errors.New("email already registered"))
+					Return(nil, constant.ErrDuplicateEmail)
 			},
 			wantStatus:  fiber.StatusConflict,
 			wantSuccess: false,
@@ -117,7 +118,7 @@ func TestAuthHandler_Login(t *testing.T) {
 			mockSetup: func(svc *mock.MockUserService) {
 				svc.EXPECT().
 					Login(gomock.Any(), gomock.Any()).
-					Return(nil, errors.New("invalid credentials"))
+					Return(nil, constant.ErrInvalidCredentials)
 			},
 			wantStatus:  fiber.StatusUnauthorized,
 			wantSuccess: false,
@@ -179,7 +180,7 @@ func TestAuthHandler_Refresh(t *testing.T) {
 			mockSetup: func(svc *mock.MockUserService) {
 				svc.EXPECT().
 					Refresh(gomock.Any(), "badtoken").
-					Return(nil, errors.New("token is invalid or expired"))
+					Return(nil, constant.ErrTokenInvalid)
 			},
 			wantStatus:  fiber.StatusUnauthorized,
 			wantSuccess: false,

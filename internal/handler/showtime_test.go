@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/firmanains/cinema-ticketing/internal/constant"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
 	"github.com/firmanains/cinema-ticketing/internal/handler"
 	"github.com/firmanains/cinema-ticketing/internal/mock"
@@ -100,7 +101,7 @@ func TestShowtimeHandler_GetByID(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					GetByID(gomock.Any(), id).
-					Return(nil, errors.New("showtime not found"))
+					Return(nil, constant.ErrShowtimeNotFound)
 			},
 			wantStatus:  fiber.StatusNotFound,
 			wantSuccess: false,
@@ -172,7 +173,7 @@ func TestShowtimeHandler_Create(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					Create(gomock.Any(), gomock.Any()).
-					Return(nil, errors.New("start time must be before end time"))
+					Return(nil, constant.ErrInvalidTimeRange)
 			},
 			wantStatus:  fiber.StatusUnprocessableEntity,
 			wantSuccess: false,
@@ -240,7 +241,7 @@ func TestShowtimeHandler_Update(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					Update(gomock.Any(), id, gomock.Any()).
-					Return(nil, errors.New("showtime not found"))
+					Return(nil, constant.ErrShowtimeNotFound)
 			},
 			wantStatus:  fiber.StatusNotFound,
 			wantSuccess: false,
@@ -252,7 +253,7 @@ func TestShowtimeHandler_Update(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					Update(gomock.Any(), id, gomock.Any()).
-					Return(nil, errors.New("no fields to update"))
+					Return(nil, constant.ErrNoFieldsToUpdate)
 			},
 			wantStatus:  fiber.StatusUnprocessableEntity,
 			wantSuccess: false,
@@ -267,7 +268,7 @@ func TestShowtimeHandler_Update(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					Update(gomock.Any(), id, gomock.Any()).
-					Return(nil, errors.New("start time must be before end time"))
+					Return(nil, constant.ErrInvalidTimeRange)
 			},
 			wantStatus:  fiber.StatusUnprocessableEntity,
 			wantSuccess: false,
@@ -331,7 +332,7 @@ func TestShowtimeHandler_Delete(t *testing.T) {
 			mockSetup: func(svc *mock.MockShowtimeService) {
 				svc.EXPECT().
 					Delete(gomock.Any(), id).
-					Return(errors.New("showtime not found"))
+					Return(constant.ErrShowtimeNotFound)
 			},
 			wantStatus:  fiber.StatusNotFound,
 			wantSuccess: false,

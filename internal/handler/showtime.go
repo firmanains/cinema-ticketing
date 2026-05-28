@@ -39,7 +39,7 @@ func (h *ShowtimeHandler) GetAll(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetAll(c.UserContext(), page, limit)
 	if err != nil {
-		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "ok", result)
@@ -53,7 +53,7 @@ func (h *ShowtimeHandler) GetByID(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetByID(c.UserContext(), id)
 	if err != nil {
-		return response.Error(c, fiber.StatusNotFound, err.Error())
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "ok", result)
@@ -70,10 +70,7 @@ func (h *ShowtimeHandler) Create(c *fiber.Ctx) error {
 
 	result, err := h.svc.Create(c.UserContext(), req)
 	if err != nil {
-		if err.Error() == "start time must be before end time" {
-			return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
-		}
-		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusCreated, "showtime created", result)
@@ -95,14 +92,7 @@ func (h *ShowtimeHandler) Update(c *fiber.Ctx) error {
 
 	result, err := h.svc.Update(c.UserContext(), id, req)
 	if err != nil {
-		switch err.Error() {
-		case "showtime not found":
-			return response.Error(c, fiber.StatusNotFound, err.Error())
-		case "no fields to update", "start time must be before end time":
-			return response.Error(c, fiber.StatusUnprocessableEntity, err.Error())
-		default:
-			return response.Error(c, fiber.StatusInternalServerError, "internal server error")
-		}
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "showtime updated", result)
@@ -115,10 +105,7 @@ func (h *ShowtimeHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(c.UserContext(), id); err != nil {
-		if err.Error() == "showtime not found" {
-			return response.Error(c, fiber.StatusNotFound, err.Error())
-		}
-		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "showtime deleted", nil)

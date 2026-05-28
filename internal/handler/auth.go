@@ -36,10 +36,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	result, err := h.userSvc.Register(c.UserContext(), req)
 	if err != nil {
-		if err.Error() == "email already registered" {
-			return response.Error(c, fiber.StatusConflict, err.Error())
-		}
-		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusCreated, "registered successfully", result)
@@ -56,7 +53,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	result, err := h.userSvc.Login(c.UserContext(), req)
 	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, err.Error())
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "login successful", result)
@@ -75,7 +72,7 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 
 	result, err := h.userSvc.Refresh(c.UserContext(), body.RefreshToken)
 	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, err.Error())
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "token refreshed", result)
@@ -93,7 +90,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	}
 
 	if err := h.userSvc.Logout(c.UserContext(), body.RefreshToken); err != nil {
-		return response.Error(c, fiber.StatusInternalServerError, "internal server error")
+		return response.ErrorFromDomain(c, err)
 	}
 
 	return response.Success(c, fiber.StatusOK, "logged out successfully", nil)
