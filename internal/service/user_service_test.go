@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/firmanains/cinema-ticketing/config"
 	"github.com/firmanains/cinema-ticketing/internal/domain"
@@ -27,6 +28,79 @@ func newTestConfig() *config.Config {
 		JWTSecret:               "testsecret",
 		JWTAccessExpiresMinutes: 30,
 		JWTRefreshExpiresDays:   7,
+	}
+}
+
+func TestUserService_Login(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      domain.LoginRequest
+		mockSetup  func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository)
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name:  "success",
+			input: domain.LoginRequest{Email: "john@example.com", Password: "secret123"},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+				userRepo.EXPECT().
+					FindByEmail(gomock.Any(), "john@example.com").
+					Return(&domain.User{PasswordHash: string(hash)}, nil)
+				tokenRepo.EXPECT().
+					Store(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:  "user not found",
+			input: domain.LoginRequest{Email: "ghost@example.com", Password: "secret123"},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				userRepo.EXPECT().
+					FindByEmail(gomock.Any(), "ghost@example.com").
+					Return(nil, errors.New("user not found"))
+			},
+			wantErr:    true,
+			wantErrMsg: "invalid credentials",
+		},
+		{
+			name:  "wrong password",
+			input: domain.LoginRequest{Email: "john@example.com", Password: "wrongpass"},
+			mockSetup: func(userRepo *mock.MockUserRepository, tokenRepo *mock.MockRefreshTokenRepository) {
+				hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+				userRepo.EXPECT().
+					FindByEmail(gomock.Any(), "john@example.com").
+					Return(&domain.User{PasswordHash: string(hash)}, nil)
+			},
+			wantErr:    true,
+			wantErrMsg: "invalid credentials",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			userRepo := mock.NewMockUserRepository(ctrl)
+			tokenRepo := mock.NewMockRefreshTokenRepository(ctrl)
+			tt.mockSetup(userRepo, tokenRepo)
+
+			svc := service.NewUserService(userRepo, tokenRepo, newTestConfig(), newTestRedis(t))
+			result, err := svc.Login(context.Background(), tt.input)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrMsg)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.NotEmpty(t, result.AccessToken)
+				assert.NotEmpty(t, result.RefreshToken)
+			}
+		})
 	}
 }
 
