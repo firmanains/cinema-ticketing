@@ -1,54 +1,53 @@
 {
   "info": {
+    "_postman_id": "7fb69938-e60a-48cc-914b-20544018fa57",
     "name": "Cinema Ticketing API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "16233780"
   },
-  "variable": [
-    { "key": "BASE", "value": "http://localhost:3000" },
-    { "key": "access_token", "value": "" },
-    { "key": "refresh_token", "value": "" }
-  ],
   "item": [
     {
       "name": "Auth",
       "item": [
         {
           "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data) {",
+                  "  pm.collectionVariables.set('access_token', res.data.access_token);",
+                  "  pm.collectionVariables.set('refresh_token', res.data.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "url": "{{BASE}}/api/v1/auth/register",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/v1/auth/register",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "auth", "register"]
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.data) {",
-                  "  pm.collectionVariables.set('access_token', res.data.access_token);",
-                  "  pm.collectionVariables.set('refresh_token', res.data.refresh_token);",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
           "name": "Login",
-          "request": {
-            "method": "POST",
-            "url": "{{BASE}}/api/v1/auth/login",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}"
-            }
-          },
           "event": [
             {
               "listen": "test",
@@ -59,22 +58,33 @@
                   "  pm.collectionVariables.set('access_token', res.data.access_token);",
                   "  pm.collectionVariables.set('refresh_token', res.data.refresh_token);",
                   "}"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
-          ]
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/v1/auth/login",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "response": []
         },
         {
           "name": "Refresh Token",
-          "request": {
-            "method": "POST",
-            "url": "{{BASE}}/api/v1/auth/refresh",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
-            }
-          },
           "event": [
             {
               "listen": "test",
@@ -84,22 +94,52 @@
                   "if (res.data) {",
                   "  pm.collectionVariables.set('access_token', res.data.access_token);",
                   "}"
-                ]
+                ],
+                "type": "text/javascript"
               }
             }
-          ]
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/v1/auth/refresh",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          },
+          "response": []
         },
         {
           "name": "Logout",
           "request": {
             "method": "POST",
-            "url": "{{BASE}}/api/v1/auth/logout",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/v1/auth/logout",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "auth", "logout"]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -110,68 +150,168 @@
           "name": "Get All Showtimes",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{BASE}}/api/v1/showtimes?page=1&limit=10",
               "host": ["{{BASE}}"],
               "path": ["api", "v1", "showtimes"],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Get Showtime by ID",
           "request": {
             "method": "GET",
-            "url": "{{BASE}}/api/v1/showtimes/:id",
-            "variable": [{ "key": "id", "value": "" }]
-          }
+            "header": [],
+            "url": {
+              "raw": "{{BASE}}/api/v1/showtimes/:id",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "showtimes", ":id"],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Create Showtime",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjA1ODgxNjUsImp0aSI6IkpESjVKREV3SkdFMU1qbGlNemsyT0RkaVpXTTFaRGRqTVRBeU9YVkRkRkJaWm1seFZHczFjVUYwWjFwbVNHdFhhekZRV0ZGR2VqQnVjbmt5IiwiaXNzIjoiQUhVLU9OTElORSIsIm5iZiI6MTc2MDU4ODE2NSwiZXhwIjoxNzYxMTkyOTY1LCJkYXRhIjp7InRoZU9uZVRoYXRXZUdhdmVJZCI6IjEzNDUyMSIsInRoZU9uZVRoYXRXZUdhdmVOYW1lIjoiYXBpLWJwa3AifX0.bIufeuWAUlbmKJ9U7s-ZX9tuY5x0vh4R9pwPpOxHQyw",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
-            "url": "{{BASE}}/api/v1/showtimes",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"movie_title\": \"Inception\",\n  \"start_time\": \"2026-07-01T10:00:00Z\",\n  \"end_time\": \"2026-07-01T12:00:00Z\",\n  \"price\": 50000,\n  \"total_seats\": 100\n}"
+            },
+            "url": {
+              "raw": "{{BASE}}/api/v1/showtimes",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "showtimes"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Update Showtime",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjA1ODgxNjUsImp0aSI6IkpESjVKREV3SkdFMU1qbGlNemsyT0RkaVpXTTFaRGRqTVRBeU9YVkRkRkJaWm1seFZHczFjVUYwWjFwbVNHdFhhekZRV0ZGR2VqQnVjbmt5IiwiaXNzIjoiQUhVLU9OTElORSIsIm5iZiI6MTc2MDU4ODE2NSwiZXhwIjoxNzYxMTkyOTY1LCJkYXRhIjp7InRoZU9uZVRoYXRXZUdhdmVJZCI6IjEzNDUyMSIsInRoZU9uZVRoYXRXZUdhdmVOYW1lIjoiYXBpLWJwa3AifX0.bIufeuWAUlbmKJ9U7s-ZX9tuY5x0vh4R9pwPpOxHQyw",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "PUT",
-            "url": "{{BASE}}/api/v1/showtimes/:id",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"movie_title\": \"Inception 2\",\n  \"price\": 75000\n}"
             },
-            "variable": [{ "key": "id", "value": "" }]
-          }
+            "url": {
+              "raw": "{{BASE}}/api/v1/showtimes/:id",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "showtimes", ":id"],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Delete Showtime",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjA1ODgxNjUsImp0aSI6IkpESjVKREV3SkdFMU1qbGlNemsyT0RkaVpXTTFaRGRqTVRBeU9YVkRkRkJaWm1seFZHczFjVUYwWjFwbVNHdFhhekZRV0ZGR2VqQnVjbmt5IiwiaXNzIjoiQUhVLU9OTElORSIsIm5iZiI6MTc2MDU4ODE2NSwiZXhwIjoxNzYxMTkyOTY1LCJkYXRhIjp7InRoZU9uZVRoYXRXZUdhdmVJZCI6IjEzNDUyMSIsInRoZU9uZVRoYXRXZUdhdmVOYW1lIjoiYXBpLWJwa3AifX0.bIufeuWAUlbmKJ9U7s-ZX9tuY5x0vh4R9pwPpOxHQyw",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "DELETE",
-            "url": "{{BASE}}/api/v1/showtimes/:id",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
             ],
-            "variable": [{ "key": "id", "value": "" }]
-          }
+            "url": {
+              "raw": "{{BASE}}/api/v1/showtimes/:id",
+              "host": ["{{BASE}}"],
+              "path": ["api", "v1", "showtimes", ":id"],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
     }
   ]
 }
