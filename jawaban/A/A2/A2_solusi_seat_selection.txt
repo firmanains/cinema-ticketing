@@ -1,0 +1,75 @@
+A.2 constant SOLUSI SISTEM PEMILIHAN TEMPAT DUDUK
+==========================================
+
+
+1. SISTEM PEMILIHAN TEMPAT DUDUK (HIGH CONCURRENCY)
+-----------------------------------------------------
+Tantangan utama adalah banyak user bisa memilih kursi yang sama secara
+bersamaan. Solusi menggunakan dua layer:
+
+Layer 1 constant Redis sebagai fast lock (sebelum masuk queue)
+
+  Saat user memilih kursi, Booking Service langsung melakukan atomic lock:
+
+    SETNX seat:{showtime_id}:{seat_id} {user_id} EX 300
+
+  Jika kursi sudah dikunci user lain, Redis langsung mengembalikan gagal
+  dan sistem merespons 409 Conflict tanpa menyentuh database. Ini memastikan
+  sistem tetap responsif meski diakses ribuan user sekaligus karena Redis
+  beroperasi in-memory dengan latensi sub-millisecond.
+
+  Jika berhasil, kursi terkunci 5 menit (TTL), event dikirim ke Kafka,
+  dan user mendapat 202 Accepted constant booking pending.
+
+Layer 2 constant PostgreSQL dengan SELECT FOR UPDATE (source of truth)
+
+  Consumer yang memproses event dari Kafka tetap melakukan validasi akhir
+  ke database menggunakan SELECT FOR UPDATE sebelum commit. Ini memastikan
+  konsistensi data meskipun ada edge case di layer Redis.
+
+Pola UX: eventual consistency constant user tidak langsung dapat "booking sukses",
+melainkan status pending dulu. Konfirmasi akhir via WebSocket setelah
+consumer selesai memproses.
+
+
+2. SISTEM RESTOK TIKET YANG TELAH TERJUAL
+------------------------------------------
+
+a. User tidak jadi memesan (timeout)
+
+  Redis TTL habis otomatis setelah 5 menit jika user tidak menyelesaikan
+  pembayaran. Kursi kembali tersedia tanpa intervensi manual.
+
+  Consumer cleanup secara berkala:
+    UPDATE booking_seats SET status = 'available'
+    WHERE booking_id IN (
+      SELECT id FROM bookings
+      WHERE status = 'pending' AND expires_at < NOW()
+    )
+
+b. User membatalkan pesanan
+
+  User menerbitkan event booking.cancelled yang dikonsumsi Consumer.
+  Consumer update status booking di DB dan hapus Redis key untuk kursi,
+  sehingga kursi langsung tersedia kembali.
+
+
+3. REFUND DAN PEMBATALAN DARI PIHAK BIOSKOP
+--------------------------------------------
+Ketika bioskop membatalkan satu jadwal, dampaknya bisa mengenai ratusan
+booking sekaligus. Proses ini dilakukan secara batch melalui Kafka:
+
+  Admin batalkan showtime_id: X
+    -> Publish event showtime.cancelled ke Kafka
+      -> Consumer batch process:
+           1. UPDATE semua kursi showtime tersebut -> AVAILABLE
+           2. DEL semua Redis key terkait showtime
+           3. INSERT bulk refund_records
+           4. Publish event refund.initiated per booking
+           5. Notifikasi user via WebSocket
+
+Tabel refunds menyimpan kolom initiated_by ('user' atau 'cinema') untuk
+membedakan asal pembatalan tanpa perlu tabel terpisah.
+
+Rekonsiliasi dengan payment gateway (Midtrans / Xendit) dilakukan
+menggunakan payments.gateway_ref yang tersimpan di tabel payments.
