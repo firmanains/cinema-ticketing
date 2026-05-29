@@ -8,6 +8,7 @@ import (
 
 	"github.com/firmanains/cinema-ticketing/config"
 	"github.com/firmanains/cinema-ticketing/internal/handler"
+	"github.com/firmanains/cinema-ticketing/internal/middleware"
 	"github.com/firmanains/cinema-ticketing/internal/repository"
 	"github.com/firmanains/cinema-ticketing/internal/service"
 )
@@ -51,9 +52,11 @@ func main() {
 
 	api.Get("/showtimes", showtimeHandler.GetAll)
 	api.Get("/showtimes/:id", showtimeHandler.GetByID)
-	api.Post("/showtimes", showtimeHandler.Create)
-	api.Put("/showtimes/:id", showtimeHandler.Update)
-	api.Delete("/showtimes/:id", showtimeHandler.Delete)
+
+	protected := api.Group("", middleware.JWTProtected(cfg))
+	protected.Post("/showtimes", showtimeHandler.Create)
+	protected.Put("/showtimes/:id", showtimeHandler.Update)
+	protected.Delete("/showtimes/:id", showtimeHandler.Delete)
 
 	log.Printf("starting server on port %s", cfg.AppPort)
 	if err := app.Listen(":" + cfg.AppPort); err != nil {
